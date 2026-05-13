@@ -15,3 +15,42 @@ class FFTEngine:
 
         # Normaliza para 0-255 para o Matplotlib/OpenCV
         return cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+    @staticmethod
+    def apply_low_pass(image):
+        """Suavização (Blur) - Remove altas frequências."""
+        return cv2.GaussianBlur(image, (9, 9), 0)
+
+    @staticmethod
+    def apply_high_pass(image):
+        """Realce de bordas (Laplacian) - Mantém altas frequências."""
+        # Calcula o gradiente e soma à imagem original para destacar bordas
+        laplacian = cv2.Laplacian(image, cv2.CV_64F)
+        return cv2.convertScaleAbs(image.astype(float) - laplacian)
+
+    @staticmethod
+    def apply_morphology(image, op_type="erosion"):
+        kernel = np.ones((5, 5), np.uint8)
+        if op_type == "erosion":
+            return cv2.erode(image, kernel, iterations=1)
+        return cv2.dilate(image, kernel, iterations=1)
+
+    @staticmethod
+    def add_noise(image, noise_type="gauss"):
+        if noise_type == "gauss":
+            row, col = image.shape
+            mean = 0
+            sigma = 30
+            gauss = np.random.normal(mean, sigma, (row, col))
+            noisy = image + gauss
+            return np.clip(noisy, 0, 255).astype(np.uint8)
+        elif noise_type == "s&p":
+            prob = 0.05
+            noisy = image.copy()
+            # Salt
+            thres = 1 - prob
+            rdn = np.random.random(image.shape)
+            noisy[rdn > thres] = 255
+            # Pepper
+            noisy[rdn < prob] = 0
+            return noisy
