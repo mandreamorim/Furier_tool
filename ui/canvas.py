@@ -12,18 +12,32 @@ class InteractiveCanvas(QLabel):
         super().__init__()
         self.setFixedSize(size, size)
         self.data = np.zeros((size, size), dtype=np.uint8)
+        self.original_data = None
         self.undo_stack = deque(maxlen=30)
         self.brush_size = 15
+        self.brush_shape = "Círculo"
+        self.brush_shade = 255
         self.update_display()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.undo_stack.append(self.data.copy())
 
+    def reset(self):
+        if self.original_data is not None:
+            self.undo_stack.append(self.data.copy())
+            self.data = self.original_data.copy()
+            self.update_display()
+            self.changed.emit()
+
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
             x, y = int(event.position().x()), int(event.position().y())
-            cv2.circle(self.data, (x, y), self.brush_size, 255, -1)
+            if self.brush_shape == "Círculo":
+                cv2.circle(self.data, (x, y), self.brush_size, self.brush_shade, -1)
+            else:
+                cv2.rectangle(self.data, (x - self.brush_size, y - self.brush_size), 
+                              (x + self.brush_size, y + self.brush_size), self.brush_shade, -1)
             self.update_display()
             self.changed.emit()
 
@@ -47,12 +61,12 @@ class InteractiveCanvas(QLabel):
             self.changed.emit()
 
     def set_image_new(self, image_array):
-        """Carrega imagem com padding para não distorcer frequências."""
+        """Carrega imagem sem padding para não distorcer frequências."""
         h, w = image_array.shape[:2]
-        side = self.width()  # 512
+        max_side = 512
 
         # 1. Calcula escala para caber sem distorcer
-        scale = side / max(h, w)
+        scale = max_side / max(h, w)
         new_w, new_h = int(w * scale), int(h * scale)
 
         # 2. Redimensiona preservando energia (INTER_AREA)
@@ -60,11 +74,10 @@ class InteractiveCanvas(QLabel):
         if len(resized.shape) == 3:
             resized = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 
-        # 3. Centraliza no canvas preto
-        self.data = np.zeros((side, side), dtype=np.uint8)
-        x_off = (side - new_w) // 2
-        y_off = (side - new_h) // 2
-        self.data[y_off:y_off + new_h, x_off:x_off + new_w] = resized
+        # 3. Ajusta o tamanho do widget
+        self.setFixedSize(new_w, new_h)
+        self.data = resized
+        self.original_data = self.data.copy()
 
         self.update_display()
         self.changed.emit()

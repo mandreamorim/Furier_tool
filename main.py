@@ -1,9 +1,7 @@
 import sys
 
 import cv2
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout
-from PySide6.QtCore import QTimer, Qt
-from PySide6.QtGui import QShortcut, QKeySequence
+from PySide6.QtWidgets import QApplication
 
 from ui.window import MainWindow
 

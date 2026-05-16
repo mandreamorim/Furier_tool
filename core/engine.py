@@ -11,9 +11,10 @@ class FFTEngine:
         f_shift = fft.fftshift(f_transform)
 
         # Magnitude em log para visualização
-        magnitude = 20 * np.log(np.abs(f_shift) + 1)
+        magnitude = np.log(np.abs(f_shift) + 1) * 20
 
         # Normaliza para 0-255 para o Matplotlib/OpenCV
+        # return magnitude
         return cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
 
     @staticmethod
