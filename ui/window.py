@@ -26,7 +26,7 @@ from core.engine import FFTEngine
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Fourier Editor - Data Lumini Edition")
+        self.setWindowTitle("Fourier Editor")
 
         # Widget Central e Layouts
         central_widget = QWidget()
