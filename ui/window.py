@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpinBox, QLabel, QFileDialog, QComboBox
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpinBox, QLabel, QFileDialog, QComboBox, QCheckBox
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QShortcut, QKeySequence, QGuiApplication
 import cv2
@@ -93,6 +93,11 @@ class MainWindow(QMainWindow):
         btn_load.clicked.connect(self.load_image_dialog)
         self.reset_button_layout.addWidget(btn_load)
 
+        # Toggle de visualização RGB
+        self.toggle_rgb = QCheckBox("Vis. RGB")
+        self.toggle_rgb.stateChanged.connect(self.toggle_rgb_view)
+        self.reset_button_layout.addWidget(self.toggle_rgb)
+
         # Botão de reset isolado numa linha abaixo
         btn_reset = QPushButton("Resetar")
         btn_reset.clicked.connect(self.canvas.reset)
@@ -143,10 +148,19 @@ class MainWindow(QMainWindow):
     def update_brush_shade(self, value):
         self.canvas.brush_shade = value
 
+    def toggle_rgb_view(self, state):
+        self.canvas.show_rgb = (state == Qt.Checked.value)
+        self.canvas.update_display()
+
     def apply_op(self, func):
         # Salva estado atual na pilha antes de aplicar a operação
-        self.canvas.undo_stack.append(self.canvas.data.copy())
-        self.canvas.data = func(self.canvas.data)
+        self.canvas.undo_stack.append((self.canvas.data.copy(), self.canvas.data_rgb.copy()))
+        
+        # Aplica a operação na versão RGB e gera a versão P&B a partir dela
+        # para garantir consistência (especialmente em operações aleatórias)
+        self.canvas.data_rgb = func(self.canvas.data_rgb)
+        self.canvas.data = cv2.cvtColor(self.canvas.data_rgb, cv2.COLOR_RGB2GRAY)
+        
         self.canvas.update_display()
         self.canvas.changed.emit()
 

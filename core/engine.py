@@ -25,9 +25,13 @@ class FFTEngine:
     @staticmethod
     def apply_high_pass(image):
         """Realce de bordas (Laplacian) - Mantém altas frequências."""
-        # Calcula o gradiente e soma à imagem original para destacar bordas
-        laplacian = cv2.Laplacian(image, cv2.CV_64F)
-        return cv2.convertScaleAbs(image.astype(float) - laplacian)
+        if len(image.shape) == 3:
+            # Para RGB, aplicar laplaciano e subtrair de cada canal
+            laplacian = cv2.Laplacian(image, cv2.CV_64F)
+            return cv2.convertScaleAbs(image.astype(float) - laplacian)
+        else:
+            laplacian = cv2.Laplacian(image, cv2.CV_64F)
+            return cv2.convertScaleAbs(image.astype(float) - laplacian)
 
     @staticmethod
     def apply_morphology(image, op_type="erosion"):
@@ -39,10 +43,10 @@ class FFTEngine:
     @staticmethod
     def add_noise(image, noise_type="gauss"):
         if noise_type == "gauss":
-            row, col = image.shape
+            shape = image.shape
             mean = 0
             sigma = 30
-            gauss = np.random.normal(mean, sigma, (row, col))
+            gauss = np.random.normal(mean, sigma, shape)
             noisy = image + gauss
             return np.clip(noisy, 0, 255).astype(np.uint8)
         elif noise_type == "s&p":
