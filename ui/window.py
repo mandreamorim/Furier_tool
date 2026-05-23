@@ -38,25 +38,36 @@ class MainWindow(QMainWindow):
 
         self.canvas = InteractiveCanvas()
 
-        # Configuração do Matplotlib para o Gráfico
+        # Configuração do Matplotlib para o Gráfico 1
         self.fig = Figure(facecolor='#121212')
         self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
         self.ax = self.fig.add_subplot(111)
         self.ax.axis('off')
         self.canvas_fft = FigureCanvasQTAgg(self.fig)
 
+        # Configuração do Matplotlib para o Gráfico 2 (Opcional)
+        self.fig2 = Figure(facecolor='#121212')
+        self.fig2.subplots_adjust(left=0, right=1, top=1, bottom=0)
+        self.ax2 = self.fig2.add_subplot(111)
+        self.ax2.axis('off')
+        self.canvas_fft_2 = FigureCanvasQTAgg(self.fig2)
+        self.canvas_fft_2.setVisible(False)
+
         top_layout.addWidget(self.canvas)
         top_layout.addWidget(self.canvas_fft)
+        top_layout.addWidget(self.canvas_fft_2)
 
         # Layout Inferior: Botões de Operação
         self.button_layout = QHBoxLayout()
         self.reset_button_layout = QHBoxLayout()
+        self.third_row_layout = QHBoxLayout()
         self.setup_buttons()
 
         # Montagem do Layout Principal
         main_v_layout.addLayout(top_layout)
         main_v_layout.addLayout(self.button_layout)
         main_v_layout.addLayout(self.reset_button_layout)
+        main_v_layout.addLayout(self.third_row_layout)
 
         # Timer para atualização reativa (Debounce)
         self.timer = QTimer()
@@ -132,6 +143,34 @@ class MainWindow(QMainWindow):
         self.reset_button_layout.addWidget(shade_label)
         self.reset_button_layout.addWidget(self.shade_spin)
 
+        # Terceira linha de botões e selects
+        self.check_extra_view = QCheckBox("Trasnformada inversa")
+        self.check_extra_view.stateChanged.connect(self.toggle_extra_view)
+        
+        self.combo_extra_filter = QComboBox()
+        # Adiciona itens com categorias
+        self.combo_extra_filter.addItem("Nenhum")
+        self.combo_extra_filter.insertSeparator(1)
+        
+        self.combo_extra_filter.addItem("--- PASSA-BAIXA ---")
+        self.combo_extra_filter.addItems(["Gaussiano", "Média", "Mediana", "K-Vizinhos"])
+        
+        self.combo_extra_filter.insertSeparator(self.combo_extra_filter.count())
+        self.combo_extra_filter.addItem("--- PASSA-ALTA ---")
+        self.combo_extra_filter.addItems(["Canny", "Sobel", "Laplace"])
+        
+        # Desabilita os headers para não serem selecionáveis
+        model = self.combo_extra_filter.model()
+        model.item(2).setEnabled(False) # PASSA-BAIXA
+        model.item(8).setEnabled(False) # PASSA-ALTA
+        
+        self.combo_extra_filter.setVisible(False)
+        self.combo_extra_filter.currentTextChanged.connect(self.update_fft)
+        
+        self.third_row_layout.addWidget(self.check_extra_view)
+        self.third_row_layout.addWidget(self.combo_extra_filter)
+        self.third_row_layout.addStretch()
+
     def update_brush_size(self, value):
         self.canvas.brush_size = value
 
@@ -164,13 +203,54 @@ class MainWindow(QMainWindow):
         self.canvas.update_display()
         self.canvas.changed.emit()
 
+    def toggle_extra_view(self, state):
+        is_checked = (state == Qt.Checked.value)
+        self.combo_extra_filter.setVisible(is_checked)
+        self.canvas_fft_2.setVisible(is_checked)
+        if is_checked:
+            self.update_fft()
+
     def update_fft(self):
         mag = FFTEngine.get_fft_magnitude(self.canvas.data)
+        
+        # Atualiza primeiro FFT
         self.canvas_fft.setFixedSize(self.canvas.width(), self.canvas.height())
         self.ax.clear()
         self.ax.imshow(mag, cmap='gray', aspect='auto')
         self.ax.axis('off')
         self.canvas_fft.draw()
+
+        # Atualiza segundo FFT se estiver visível
+        if self.canvas_fft_2.isVisible():
+            # 1. Obter imagem base
+            img_process = self.canvas.data.copy()
+            
+            # 2. Aplicar filtro espacial se selecionado
+            filter_name = self.combo_extra_filter.currentText()
+            if filter_name == "Gaussiano":
+                img_process = FFTEngine.apply_gaussian(img_process)
+            elif filter_name == "Média":
+                img_process = FFTEngine.apply_mean(img_process)
+            elif filter_name == "Mediana":
+                img_process = FFTEngine.apply_median(img_process)
+            elif filter_name == "K-Vizinhos":
+                img_process = FFTEngine.apply_knn(img_process)
+            elif filter_name == "Canny":
+                img_process = FFTEngine.apply_canny(img_process)
+            elif filter_name == "Sobel":
+                img_process = FFTEngine.apply_sobel(img_process)
+            elif filter_name == "Laplace":
+                img_process = FFTEngine.apply_laplacian(img_process)
+            
+            # 3. Calcular FFT -> IFFT para demonstrar
+            f_complex = FFTEngine.get_fft_complex(img_process)
+            result_img = FFTEngine.apply_ifft(f_complex)
+
+            self.canvas_fft_2.setFixedSize(self.canvas.width(), self.canvas.height())
+            self.ax2.clear()
+            self.ax2.imshow(result_img, cmap='gray', aspect='auto')
+            self.ax2.axis('off')
+            self.canvas_fft_2.draw()
 
     def set_image(self, image):
         self.canvas.set_image_new(image)
