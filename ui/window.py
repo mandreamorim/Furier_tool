@@ -33,29 +33,55 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
         main_v_layout = QVBoxLayout(central_widget)
 
-        # Layout Superior: Canvas (E) e FFT (D)
+        # Layout Superior: Canvas (E) e FFT (D) com Labels
         top_layout = QHBoxLayout()
 
+        # Original
+        col_original = QVBoxLayout()
+        self.label_original = QLabel("Original")
+        self.label_original.setAlignment(Qt.AlignCenter)
+        self.label_original.setStyleSheet("font-weight: bold; color: white; margin-bottom: 5px;")
         self.canvas = InteractiveCanvas()
+        col_original.addWidget(self.label_original)
+        col_original.addWidget(self.canvas)
 
-        # Configuração do Matplotlib para o Gráfico 1
+        # FFT
+        col_fft = QVBoxLayout()
+        self.label_fft = QLabel("Espectro de Furier")
+        self.label_fft.setAlignment(Qt.AlignCenter)
+        self.label_fft.setStyleSheet("font-weight: bold; color: white; margin-bottom: 5px;")
+        
         self.fig = Figure(facecolor='#121212')
         self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
         self.ax = self.fig.add_subplot(111)
         self.ax.axis('off')
         self.canvas_fft = FigureCanvasQTAgg(self.fig)
+        
+        col_fft.addWidget(self.label_fft)
+        col_fft.addWidget(self.canvas_fft)
 
-        # Configuração do Matplotlib para o Gráfico 2 (Opcional)
+        # Inverse FFT
+        col_ifft = QVBoxLayout()
+        self.label_ifft = QLabel("Transformada Inversa")
+        self.label_ifft.setAlignment(Qt.AlignCenter)
+        self.label_ifft.setStyleSheet("font-weight: bold; color: white; margin-bottom: 5px;")
+        
         self.fig2 = Figure(facecolor='#121212')
         self.fig2.subplots_adjust(left=0, right=1, top=1, bottom=0)
         self.ax2 = self.fig2.add_subplot(111)
         self.ax2.axis('off')
         self.canvas_fft_2 = FigureCanvasQTAgg(self.fig2)
+        
+        self.label_ifft.setVisible(False)
         self.canvas_fft_2.setVisible(False)
+        
+        col_ifft.addWidget(self.label_ifft)
+        col_ifft.addWidget(self.canvas_fft_2)
 
-        top_layout.addWidget(self.canvas)
-        top_layout.addWidget(self.canvas_fft)
-        top_layout.addWidget(self.canvas_fft_2)
+        top_layout.addLayout(col_original)
+        top_layout.addLayout(col_fft)
+        top_layout.addLayout(col_ifft)
+        top_layout.setAlignment(Qt.AlignTop)
 
         # Layout Inferior: Botões de Operação
         self.button_layout = QHBoxLayout()
@@ -205,6 +231,7 @@ class MainWindow(QMainWindow):
 
     def toggle_extra_view(self, state):
         is_checked = (state == Qt.Checked.value)
+        self.label_ifft.setVisible(is_checked)
         self.combo_extra_filter.setVisible(is_checked)
         self.canvas_fft_2.setVisible(is_checked)
         if is_checked:
